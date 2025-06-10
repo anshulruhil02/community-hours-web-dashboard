@@ -14,7 +14,18 @@ import {
   IconButton,
   Skeleton,
   Alert,
-  Stack,
+  Avatar,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  TextField,
+  Snackbar,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -32,6 +43,9 @@ import {
   Edit,
   Download,
   Share,
+  Check,
+  Close,
+  Warning,
 } from "@mui/icons-material";
 import { userService } from "../services/userService";
 import { Submission } from "../types/User";
@@ -42,6 +56,17 @@ const SubmissionDetail: React.FC = () => {
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<boolean>(false);
+  
+  // Dialog states
+  const [approveDialogOpen, setApproveDialogOpen] = useState<boolean>(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState<boolean>(false);
+  const [rejectionReason, setRejectionReason] = useState<string>("");
+  
+  // Snackbar states
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">("success");
 
   useEffect(() => {
     const fetchSubmission = async () => {
@@ -63,6 +88,52 @@ const SubmissionDetail: React.FC = () => {
       fetchSubmission();
     }
   }, [submissionId]);
+
+  const handleApprove = async () => {
+    if (!submission) return;
+    
+    try {
+      setActionLoading(true);
+      const updatedSubmission = await userService.approveSubmission(submission.id);
+      setSubmission(updatedSubmission);
+      setSnackbarMessage("Submission approved successfully!");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+      setApproveDialogOpen(false);
+    } catch (err) {
+      console.error("Error approving submission:", err);
+      setSnackbarMessage("Failed to approve submission. Please try again.");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!submission) return;
+    
+    try {
+      setActionLoading(true);
+      const updatedSubmission = await userService.rejectSubmission(
+        submission.id, 
+        rejectionReason.trim() || undefined
+      );
+      setSubmission(updatedSubmission);
+      setSnackbarMessage("Submission rejected successfully!");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+      setRejectDialogOpen(false);
+      setRejectionReason("");
+    } catch (err) {
+      console.error("Error rejecting submission:", err);
+      setSnackbarMessage("Failed to reject submission. Please try again.");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const formatDate = (dateString?: string | null): string => {
     if (!dateString) return "N/A";
@@ -99,34 +170,29 @@ const SubmissionDetail: React.FC = () => {
       case "APPROVED":
         return <CheckCircle />;
       case "REJECTED":
-        return <CheckCircle />;
+        return <Close />;
       default:
         return <Pending />;
     }
+  };
+
+  const canMakeDecision = (status: string) => {
+    return status === "SUBMITTED";
   };
 
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ mb: 3 }}>
-          <Skeleton
-            variant="rectangular"
-            width={100}
-            height={40}
-            sx={{ mb: 2 }}
-          />
+          <Skeleton variant="rectangular" width={100} height={40} sx={{ mb: 2 }} />
           <Skeleton variant="text" width="60%" height={40} />
           <Skeleton variant="text" width="40%" height={30} />
         </Box>
-
         <Grid container spacing={3}>
-          {/* @ts-ignore */}
-          <Grid xs={12} md={8}>
+          <Grid xs={12} md={8} {...({} as any)}>
             <Skeleton variant="rectangular" height={400} />
           </Grid>
-          {/* @ts-ignore */}
-
-          <Grid xs={12} md={4}>
+          <Grid xs={12} md={4} {...({} as any)}>
             <Skeleton variant="rectangular" height={300} />
           </Grid>
         </Grid>
@@ -175,7 +241,6 @@ const SubmissionDetail: React.FC = () => {
         >
           Back
         </Button>
-
         <Box
           sx={{
             display: "flex",
@@ -206,7 +271,6 @@ const SubmissionDetail: React.FC = () => {
               )}
             </Box>
           </Box>
-
           <Box sx={{ display: "flex", gap: 1 }}>
             <IconButton color="primary" title="Edit">
               <Edit />
@@ -221,11 +285,46 @@ const SubmissionDetail: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Decision Actions */}
+      {canMakeDecision(submission.status) && (
+        <Card sx={{ mb: 3, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
+          <CardContent>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+              <Warning sx={{ mr: 2, color: "warning.main" }} />
+              <Typography variant="h6" color="text.primary">
+                Review Required
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              This submission is awaiting your decision. Please review the details below and choose to approve or reject.
+            </Typography>
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<Check />}
+                onClick={() => setApproveDialogOpen(true)}
+                disabled={actionLoading}
+              >
+                Approve Submission
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<Close />}
+                onClick={() => setRejectDialogOpen(true)}
+                disabled={actionLoading}
+              >
+                Reject Submission
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
       <Grid container spacing={3}>
         {/* Main Content */}
-        {/* @ts-ignore */}
-
-        <Grid xs={12} md={8}>
+        <Grid xs={12} md={8} {...({} as any)}>
           {/* Service Details */}
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -233,11 +332,8 @@ const SubmissionDetail: React.FC = () => {
                 Service Details
               </Typography>
               <Divider sx={{ mb: 3 }} />
-
               <Grid container spacing={3}>
-                {/* @ts-ignore */}
-
-                <Grid xs={12} sm={6}>
+                <Grid xs={12} sm={6} {...({} as any)}>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <Business sx={{ mr: 2, color: "text.secondary" }} />
                     <Box>
@@ -250,9 +346,7 @@ const SubmissionDetail: React.FC = () => {
                     </Box>
                   </Box>
                 </Grid>
-                {/* @ts-ignore */}
-
-                <Grid xs={12} sm={6}>
+                <Grid xs={12} sm={6} {...({} as any)}>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <Schedule sx={{ mr: 2, color: "text.secondary" }} />
                     <Box>
@@ -265,9 +359,7 @@ const SubmissionDetail: React.FC = () => {
                     </Box>
                   </Box>
                 </Grid>
-
-                {/* @ts-ignore */}
-                <Grid xs={12} sm={6}>
+                <Grid xs={12} sm={6} {...({} as any)}>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <Person sx={{ mr: 2, color: "text.secondary" }} />
                     <Box>
@@ -280,9 +372,7 @@ const SubmissionDetail: React.FC = () => {
                     </Box>
                   </Box>
                 </Grid>
-                {/* @ts-ignore */}
-
-                <Grid xs={12} sm={6}>
+                <Grid xs={12} sm={6} {...({} as any)}>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <Phone sx={{ mr: 2, color: "text.secondary" }} />
                     <Box>
@@ -295,9 +385,7 @@ const SubmissionDetail: React.FC = () => {
                     </Box>
                   </Box>
                 </Grid>
-
-                {/* @ts-ignore */}
-                <Grid xs={12} sm={6}>
+                <Grid xs={12} sm={6} {...({} as any)}>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <CalendarToday sx={{ mr: 2, color: "text.secondary" }} />
                     <Box>
@@ -310,9 +398,7 @@ const SubmissionDetail: React.FC = () => {
                     </Box>
                   </Box>
                 </Grid>
-
-                {/* @ts-ignore */}
-                <Grid xs={12} sm={6}>
+                <Grid xs={12} sm={6} {...({} as any)}>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <Assignment sx={{ mr: 2, color: "text.secondary" }} />
                     <Box>
@@ -345,23 +431,14 @@ const SubmissionDetail: React.FC = () => {
         </Grid>
 
         {/* Sidebar */}
-        {/* @ts-ignore */}
-
-        <Grid xs={12} md={4}>
-          
-
-          {/* Signatures Status */}
-
-{/* Signatures and Timeline - Horizontal Stack */}
-<Stack direction="row" spacing={3} sx={{ mb: 3 , width: '100%' }}>
-    {/* Submission Information */}
-          <Card sx={{ flex: 1 }}>
+        <Grid xs={12} md={4} {...({} as any)}>
+          {/* Submission Information */}
+          <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Submission Information
               </Typography>
               <Divider sx={{ mb: 3 }} />
-
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">
                   Submission ID
@@ -370,7 +447,6 @@ const SubmissionDetail: React.FC = () => {
                   {submission.id}
                 </Typography>
               </Box>
-
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">
                   Student ID
@@ -379,7 +455,6 @@ const SubmissionDetail: React.FC = () => {
                   {submission.studentId}
                 </Typography>
               </Box>
-
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">
                   Status
@@ -392,74 +467,186 @@ const SubmissionDetail: React.FC = () => {
               </Box>
             </CardContent>
           </Card>
-  {/* Signatures Status */}
-  <Card sx={{ flex: 1 }}>
-    <CardContent>
-      <Typography variant="h6" gutterBottom>
-        Signatures
-      </Typography>
-      <Divider sx={{ mb: 3 }} />
-      <Box sx={{ mb: 2 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="body2">Pre-Approved Signature</Typography>
-          <Chip
-            label={submission.preApprovedSignatureUrl ? "Signed" : "Pending"}
-            color={submission.preApprovedSignatureUrl ? "success" : "warning"}
-            size="small"
-          />
-        </Box>
-      </Box>
-      <Box>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="body2">Supervisor Signature</Typography>
-          <Chip
-            label={submission.supervisorSignatureUrl ? "Signed" : "Pending"}
-            color={submission.supervisorSignatureUrl ? "success" : "warning"}
-            size="small"
-          />
-        </Box>
-      </Box>
-    </CardContent>
-  </Card>
 
-  {/* Submission Timeline */}
-  <Card sx={{ flex: 1 }}>
-    <CardContent>
-      <Typography variant="h6" gutterBottom>
-        Timeline
-      </Typography>
-      <Divider sx={{ mb: 3 }} />
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          Created
-        </Typography>
-        <Typography variant="body2">
-          {formatDate(submission.createdAt)}
-        </Typography>
-      </Box>
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          Last Updated
-        </Typography>
-        <Typography variant="body2">
-          {formatDate(submission.updatedAt)}
-        </Typography>
-      </Box>
-      {submission.submissionDate && (
-        <Box>
-          <Typography variant="body2" color="text.secondary">
-            Submitted
-          </Typography>
-          <Typography variant="body2">
-            {formatDate(submission.submissionDate)}
-          </Typography>
-        </Box>
-      )}
-    </CardContent>
-  </Card>
-</Stack>
+          {/* Signatures Status */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Signatures
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
+              <Box sx={{ mb: 2 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography variant="body2">
+                    Pre-Approved Signature
+                  </Typography>
+                  <Chip
+                    label={
+                      submission.preApprovedSignatureUrl ? "Signed" : "Pending"
+                    }
+                    color={
+                      submission.preApprovedSignatureUrl ? "success" : "warning"
+                    }
+                    size="small"
+                  />
+                </Box>
+              </Box>
+              <Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography variant="body2">Supervisor Signature</Typography>
+                  <Chip
+                    label={
+                      submission.supervisorSignatureUrl ? "Signed" : "Pending"
+                    }
+                    color={
+                      submission.supervisorSignatureUrl ? "success" : "warning"
+                    }
+                    size="small"
+                  />
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Submission Timeline */}
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Timeline
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Created
+                </Typography>
+                <Typography variant="body2">
+                  {formatDate(submission.createdAt)}
+                </Typography>
+              </Box>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Last Updated
+                </Typography>
+                <Typography variant="body2">
+                  {formatDate(submission.updatedAt)}
+                </Typography>
+              </Box>
+              {submission.submissionDate && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Submitted
+                  </Typography>
+                  <Typography variant="body2">
+                    {formatDate(submission.submissionDate)}
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
+
+      {/* Approve Dialog */}
+      <Dialog
+        open={approveDialogOpen}
+        onClose={() => setApproveDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Approve Submission</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to approve this submission from{" "}
+            <strong>{submission.orgName}</strong>? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setApproveDialogOpen(false)} disabled={actionLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleApprove}
+            variant="contained"
+            color="success"
+            disabled={actionLoading}
+            startIcon={<Check />}
+          >
+            {actionLoading ? "Approving..." : "Approve"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog
+        open={rejectDialogOpen}
+        onClose={() => setRejectDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Reject Submission</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Are you sure you want to reject this submission from{" "}
+            <strong>{submission.orgName}</strong>? This action cannot be undone.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Reason for rejection (optional)"
+            type="text"
+            fullWidth
+            multiline
+            rows={3}
+            variant="outlined"
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            placeholder="Provide feedback on why this submission is being rejected..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRejectDialogOpen(false)} disabled={actionLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleReject}
+            variant="contained"
+            color="error"
+            disabled={actionLoading}
+            startIcon={<Close />}
+          >
+            {actionLoading ? "Rejecting..." : "Reject"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
