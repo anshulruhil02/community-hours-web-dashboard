@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -10,6 +10,7 @@ import {
   LinearProgress
 } from '@mui/material';
 import { Email, CheckCircle, Cancel } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { DatabaseUser } from '../../types/User';
 import { formatDate, getTotalHours, getSubmissionStats, getInitials } from '../../utils/formatters';
 
@@ -18,12 +19,27 @@ interface UserCardProps {
 }
 
 export const UserCard: React.FC<UserCardProps> = ({ user }) => {
+  const navigate = useNavigate();
   const stats = getSubmissionStats(user.Submissions);
   const totalHours = getTotalHours(user.Submissions);
   const completionRate = stats.total > 0 ? (stats.submitted / stats.total) * 100 : 0;
 
+  const handleCardClick = () => {
+    navigate(`/user/${user.id}`);
+  };
+
   return (
-    <Card>
+    <Card 
+      onClick={handleCardClick}
+      sx={{ 
+        cursor: 'pointer',
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+        }
+      }}
+    >
       <CardContent>
         {/* User Header */}
         <Box display="flex" alignItems="center" mb={2}>

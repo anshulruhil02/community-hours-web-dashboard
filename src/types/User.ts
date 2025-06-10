@@ -1,12 +1,18 @@
 export interface Submission {
   id: string;
-  status: 'DRAFT' | 'SUBMITTED';
-  submissionDate: string | null;
-  hours: number | null;
   orgName: string | null;
+  hours: number | null;
+  telephone: number | null;
+  supervisorName: string | null;
+  submissionDate: string | null;
+  description: string | null;
   createdAt: string;
+  updatedAt: string;
+  studentId: string;
+  preApprovedSignatureUrl: string | null;
+  supervisorSignatureUrl: string | null;
+  status: 'DRAFT' | 'SUBMITTED';
 }
-
 export interface DatabaseUser {
   id: string;
   authProviderId: string;
