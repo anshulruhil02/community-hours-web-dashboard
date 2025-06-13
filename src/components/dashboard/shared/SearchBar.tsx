@@ -5,14 +5,15 @@ import { Search } from '@mui/icons-material';
 interface SearchBarProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
+  placeholderText: string;
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, placeholderText }) => {
   return (
     <TextField
       fullWidth
       variant="outlined"
-      placeholder="Search students by name, email, school ID, or OEN..."
+      placeholder={placeholderText}
       value={searchTerm}
       onChange={(e) => onSearchChange(e.target.value)}
       InputProps={{

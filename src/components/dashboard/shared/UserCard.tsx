@@ -11,8 +11,8 @@ import {
 } from '@mui/material';
 import { Email, CheckCircle, Cancel } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { DatabaseUser } from '../../types/User';
-import { formatDate, getTotalHours, getSubmissionStats, getInitials } from '../../utils/formatters';
+import { DatabaseUser } from '../../../types/User';
+import { formatDate, getTotalHours, getSubmissionStats, getInitials } from '../../../utils/formatters';
 
 interface UserCardProps {
   user: DatabaseUser;

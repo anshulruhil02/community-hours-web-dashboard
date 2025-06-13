@@ -11,8 +11,10 @@ export interface Submission {
   studentId: string;
   preApprovedSignatureUrl: string | null;
   supervisorSignatureUrl: string | null;
-  status: 'DRAFT' | 'SUBMITTED';
+  status: SubmissionStatus;
 }
+
+type SubmissionStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 export interface DatabaseUser {
   id: string;
   authProviderId: string;

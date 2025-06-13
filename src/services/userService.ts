@@ -52,5 +52,35 @@ export const userService = {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response.json();
-  }
+  },
+
+  async bulkApproveSubmissions(ids: string[]): Promise<any[]> { // Adjust 'any[]' to 'Submission[]' if you have Submission type
+    const response = await fetch(`${API_BASE_URL}/submissions/bulk/approve`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ submissionIds: ids }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  },
+
+  async bulkRejectSubmissions(ids: string[], reason?: string): Promise<any[]> { // Adjust 'any[]' to 'Submission[]'
+    const response = await fetch(`${API_BASE_URL}/submissions/bulk/reject`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ submissionIds: ids, reason }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  },
 };
