@@ -1,86 +1,44 @@
+// src/services/userService.ts
 import { DatabaseUser, Submission } from '../types/User';
+import axiosInstance from '../api/axiosInstance'; // Import the axios instance
 
-const API_BASE_URL = 'http://localhost:3000';
+// No need for API_BASE_URL here anymore if using axiosInstance.baseURL
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const userService = {
+  // Use axiosInstance directly
   async getAllUsers(): Promise<DatabaseUser[]> {
-    const response = await fetch(`${API_BASE_URL}/users/all`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    const response = await axiosInstance.get<DatabaseUser[]>('/users/all'); // Axios's .get() method
+    return response.data; // Axios wraps the response data in a 'data' property
   },
 
   async getUserById(id: string): Promise<DatabaseUser> {
-    const response = await fetch(`${API_BASE_URL}/users/${id}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    const response = await axiosInstance.get<DatabaseUser>(`/users/${id}`);
+    return response.data;
   },
 
-  async fetchUserSubmissionById(id: String): Promise<Submission> {
-    const response = await fetch(`${API_BASE_URL}/submissions/${id}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+  async fetchUserSubmissionById(id: string): Promise<Submission> {
+    const response = await axiosInstance.get<Submission>(`/submissions/${id}`);
+    return response.data;
   },
-  // Add these methods to userService
+
   async approveSubmission(id: string): Promise<Submission> {
-    const response = await fetch(`${API_BASE_URL}/submissions/${id}/approve`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    const response = await axiosInstance.patch<Submission>(`/submissions/${id}/approve`); // Axios .patch()
+    return response.data;
   },
 
   async rejectSubmission(id: string, reason?: string): Promise<Submission> {
-    const response = await fetch(`${API_BASE_URL}/submissions/${id}/reject`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ reason }),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    const response = await axiosInstance.patch<Submission>(`/submissions/${id}/reject`, { reason }); // Axios handles JSON stringify
+    return response.data;
   },
 
-  async bulkApproveSubmissions(ids: string[]): Promise<any[]> { // Adjust 'any[]' to 'Submission[]' if you have Submission type
-    const response = await fetch(`${API_BASE_URL}/submissions/bulk/approve`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ submissionIds: ids }),
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+  async bulkApproveSubmissions(ids: string[]): Promise<any[]> {
+    const response = await axiosInstance.patch<any[]>(`/submissions/bulk/approve`, { submissionIds: ids });
+    return response.data;
   },
 
-  async bulkRejectSubmissions(ids: string[], reason?: string): Promise<any[]> { // Adjust 'any[]' to 'Submission[]'
-    const response = await fetch(`${API_BASE_URL}/submissions/bulk/reject`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ submissionIds: ids, reason }),
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+  async bulkRejectSubmissions(ids: string[], reason?: string): Promise<any[]> {
+    const response = await axiosInstance.patch<any[]>(`/submissions/bulk/reject`, { submissionIds: ids, reason });
+    return response.data;
   },
 };

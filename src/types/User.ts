@@ -15,11 +15,14 @@ export interface Submission {
 }
 
 type SubmissionStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
+type UserRole = "SCHOOL_ADMIN" | "BOARD_ADMIN" | "STUDENT";
+
 export interface DatabaseUser {
   id: string;
   authProviderId: string;
   email: string;
   name: string;
+  role: UserRole;
   schoolId: string | null;
   oen: string | null;
   principal: string | null;
