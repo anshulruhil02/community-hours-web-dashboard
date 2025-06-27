@@ -13,7 +13,10 @@ import {
   ListItem,
   ListItemText,
 } from "@mui/material";
-import { Groups, Description, CloudDownload, School } from "@mui/icons-material"; // Add School icon
+import Groups from "@mui/icons-material/Groups";
+import Description from "@mui/icons-material/Description";
+import CloudDownload from "@mui/icons-material/CloudDownload";
+import School from "@mui/icons-material/School";
 
 import { DatabaseUser } from "../../../types/User"; // Adjust path as needed
 import { getTotalHours } from "../../../utils/formatters"; // For calculations

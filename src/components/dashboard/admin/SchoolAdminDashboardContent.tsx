@@ -6,8 +6,8 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import { Person, Groups } from "@mui/icons-material";
-
+import Person from "@mui/icons-material/Person";
+import Groups from "@mui/icons-material/Groups";
 import { DatabaseUser } from "../../../types/User";
 import { UserCard } from "../shared/UserCard"; // Adjust path as needed
 import { StatsCards } from "../shared/StatsCards"; // Adjust path as needed

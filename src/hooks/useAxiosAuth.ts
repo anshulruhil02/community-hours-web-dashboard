@@ -1,28 +1,48 @@
 // src/hooks/useAxiosAuth.ts
-import { useEffect } from 'react';
-import axiosInstance from '../api/axiosInstance'; 
-import { useAuth } from '@clerk/clerk-react'; 
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/clerk-react';
+import { setupGlobalAuthInterceptor, cleanupGlobalAuthInterceptor } from '../api/axiosInstance';
 
-const useAxiosAuth = () => {
-  const { getToken, isLoaded, isSignedIn } = useAuth(); 
+export const useGlobalAuth = () => {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const [isInterceptorReady, setIsInterceptorReady] = useState(false);
 
   useEffect(() => {
-    const requestInterceptor = axiosInstance.interceptors.request.use(async (config) => {
-      if (isLoaded && isSignedIn) {
-        const token = await getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-      }
-      return config; 
-    });
+    let timeoutId: NodeJS.Timeout;
 
+    if (isLoaded && isSignedIn) {
+      // Wait a bit to ensure Clerk is fully initialized
+      timeoutId = setTimeout(() => {
+        try {
+          console.log("Setting up global auth with Clerk at", new Date().toISOString());
+          setupGlobalAuthInterceptor(getToken);
+          setIsInterceptorReady(true);
+        } catch (error) {
+          console.error("Error setting up global auth:", error);
+        }
+      }, 300); // Small delay to ensure Clerk is fully ready
+    } else if (isLoaded && !isSignedIn) {
+      // Clean up interceptor when user is not signed in
+      console.log("User not signed in, cleaning up interceptor");
+      cleanupGlobalAuthInterceptor();
+      setIsInterceptorReady(false);
+    }
+
+    // Cleanup on unmount or dependency change
     return () => {
-      axiosInstance.interceptors.request.eject(requestInterceptor);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (!isSignedIn) {
+        cleanupGlobalAuthInterceptor();
+        setIsInterceptorReady(false);
+      }
     };
   }, [getToken, isLoaded, isSignedIn]);
 
-  return axiosInstance; 
+  // Return auth state - only consider loaded when both Clerk and interceptor are ready
+  return { 
+    isLoaded: isLoaded && (!isSignedIn || isInterceptorReady), 
+    isSignedIn 
+  };
 };
-
-export default useAxiosAuth;

@@ -1,10 +1,6 @@
 // src/services/userService.ts
 import { DatabaseUser, Submission } from '../types/User';
-import axiosInstance from '../api/axiosInstance'; // Import the axios instance
-
-// No need for API_BASE_URL here anymore if using axiosInstance.baseURL
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
+import  axiosInstance  from '../api/axiosInstance'; 
 export const userService = {
   // Use axiosInstance directly
   async getAllUsers(): Promise<DatabaseUser[]> {
@@ -13,7 +9,10 @@ export const userService = {
   },
 
   async getUserById(id: string): Promise<DatabaseUser> {
+    console.log("getUserById called at", new Date().toISOString(), "with Axios instance:", axiosInstance);
+    // Remove handlers log
     const response = await axiosInstance.get<DatabaseUser>(`/users/${id}`);
+    console.log("Response headers:", response.config.headers, "at", new Date().toISOString());
     return response.data;
   },
 

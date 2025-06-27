@@ -65,6 +65,8 @@ export const UserDetail: React.FC = () => {
     }
   }, [userId]);
 
+  console.log("userId:", userId);
+
   const fetchUserDetail = async (id: string) => {
     setLoading(true);
     try {
