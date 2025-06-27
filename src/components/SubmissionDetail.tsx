@@ -1,3 +1,6 @@
+// Enhanced SubmissionDetail Component with Student Audit Trail
+// This shows the complete implementation with the audit trail accordion
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -14,11 +17,6 @@ import {
   IconButton,
   Skeleton,
   Alert,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   Dialog,
   DialogActions,
   DialogContent,
@@ -26,6 +24,11 @@ import {
   DialogTitle,
   TextField,
   Snackbar,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Avatar,
+  Stack,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -34,8 +37,6 @@ import {
   Business,
   Person,
   Phone,
-  Email,
-  LocationOn,
   Description,
   Assignment,
   CheckCircle,
@@ -46,15 +47,24 @@ import {
   Check,
   Close,
   Warning,
+  ExpandMore,
+  History,
+  Create,
+  Send,
+  ThumbUp,
+  ThumbDown,
+  Info,
 } from "@mui/icons-material";
 import { userService } from "../services/userService";
-import { Submission } from "../types/User";
+import { Submission, AuditTrailEntry } from "../types/User";
 
 const SubmissionDetail: React.FC = () => {
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
   const [submission, setSubmission] = useState<Submission | null>(null);
+  const [auditTrail, setAuditTrail] = useState<AuditTrailEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [auditLoading, setAuditLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   
@@ -89,6 +99,24 @@ const SubmissionDetail: React.FC = () => {
     }
   }, [submissionId]);
 
+  // Function to fetch audit trail data
+  const fetchAuditTrail = async () => {
+    if (!submissionId) return;
+    
+    try {
+      setAuditLoading(true);
+      const auditData = await userService.getSubmissionAuditTrail(submissionId);
+      setAuditTrail(auditData);
+    } catch (err) {
+      console.error("Error fetching audit trail:", err);
+      setSnackbarMessage("Failed to load audit trail");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
   const handleApprove = async () => {
     if (!submission) return;
     
@@ -100,6 +128,8 @@ const SubmissionDetail: React.FC = () => {
       setSnackbarSeverity("success");
       setSnackbarOpen(true);
       setApproveDialogOpen(false);
+      // Refresh audit trail after approval
+      fetchAuditTrail();
     } catch (err) {
       console.error("Error approving submission:", err);
       setSnackbarMessage("Failed to approve submission. Please try again.");
@@ -125,6 +155,8 @@ const SubmissionDetail: React.FC = () => {
       setSnackbarOpen(true);
       setRejectDialogOpen(false);
       setRejectionReason("");
+      // Refresh audit trail after rejection
+      fetchAuditTrail();
     } catch (err) {
       console.error("Error rejecting submission:", err);
       setSnackbarMessage("Failed to reject submission. Please try again.");
@@ -135,12 +167,23 @@ const SubmissionDetail: React.FC = () => {
     }
   };
 
+  // Utility functions for formatting and display
   const formatDate = (dateString?: string | null): string => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatAuditDate = (timestamp: string): string => {
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -176,10 +219,57 @@ const SubmissionDetail: React.FC = () => {
     }
   };
 
+  // Audit trail helper functions
+  const getAuditActionIcon = (action: string) => {
+    switch (action) {
+      case "CREATED":
+        return <Create fontSize="small" />;
+      case "SUBMITTED":
+        return <Send fontSize="small" />;
+      case "APPROVED":
+        return <ThumbUp fontSize="small" />;
+      case "REJECTED":
+        return <ThumbDown fontSize="small" />;
+      default:
+        return <Info fontSize="small" />;
+    }
+  };
+
+  const getAuditActionColor = (action: string) => {
+    switch (action) {
+      case "CREATED":
+        return "primary";
+      case "SUBMITTED":
+        return "info";
+      case "APPROVED":
+        return "success";
+      case "REJECTED":
+        return "error";
+      default:
+        return "default";
+    }
+  };
+
+  const getAuditActionDescription = (entry: AuditTrailEntry): string => {
+    switch (entry.action) {
+      case "CREATED":
+        return `Submission created by ${entry.performedByName}`;
+      case "SUBMITTED":
+        return `Submitted for review by ${entry.performedByName}`;
+      case "APPROVED":
+        return `Approved by ${entry.performedByName} (${entry.performedByRole})`;
+      case "REJECTED":
+        return `Rejected by ${entry.performedByName} (${entry.performedByRole})`;
+      default:
+        return `Action performed by ${entry.performedByName}`;
+    }
+  };
+
   const canMakeDecision = (status: string) => {
     return status === "SUBMITTED";
   };
 
+  // Loading state
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -200,6 +290,7 @@ const SubmissionDetail: React.FC = () => {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -215,6 +306,7 @@ const SubmissionDetail: React.FC = () => {
     );
   }
 
+  // No submission found
   if (!submission) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -232,7 +324,7 @@ const SubmissionDetail: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header */}
+      {/* Header Section */}
       <Box sx={{ mb: 4 }}>
         <Button
           startIcon={<ArrowBack />}
@@ -285,7 +377,7 @@ const SubmissionDetail: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Decision Actions */}
+      {/* Admin Decision Actions */}
       {canMakeDecision(submission.status) && (
         <Card sx={{ mb: 3, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
           <CardContent>
@@ -325,7 +417,7 @@ const SubmissionDetail: React.FC = () => {
       <Grid container spacing={3}>
         {/* Main Content */}
         <Grid xs={12} md={8} {...({} as any)}>
-          {/* Service Details */}
+          {/* Service Details Card */}
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -415,7 +507,7 @@ const SubmissionDetail: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Description */}
+          {/* Description Card */}
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
@@ -426,6 +518,105 @@ const SubmissionDetail: React.FC = () => {
               <Typography variant="body1" sx={{ lineHeight: 1.7 }}>
                 {submission.description || "No description provided."}
               </Typography>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <Accordion>
+                <AccordionSummary
+                  expandIcon={<ExpandMore />}
+                  aria-controls="audit-trail-content"
+                  id="audit-trail-header"
+                  onClick={fetchAuditTrail}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <History sx={{ mr: 2, color: "text.secondary" }} />
+                    <Typography variant="h6">Submission History</Typography>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails>
+                  {auditLoading ? (
+                    <Box sx={{ py: 2 }}>
+                      <Skeleton variant="text" height={40} />
+                      <Skeleton variant="text" height={40} />
+                      <Skeleton variant="text" height={40} />
+                    </Box>
+                  ) : auditTrail.length > 0 ? (
+                    <Stack spacing={2} sx={{ mt: 2 }}>
+                      {auditTrail.map((entry, index) => (
+                        <Box key={entry.id} sx={{ display: 'flex', gap: 2 }}>
+                          {/* Timeline connector */}
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 40 }}>
+                            <Avatar
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                bgcolor: entry.action === 'REJECTED' ? 'error.main' :
+                                         entry.action === 'APPROVED' ? 'success.main' :
+                                         entry.action === 'SUBMITTED' ? 'info.main' : 'primary.main',
+                              }}
+                            >
+                              {getAuditActionIcon(entry.action)}
+                            </Avatar>
+                            {index < auditTrail.length - 1 && (
+                              <Box
+                                sx={{
+                                  width: 2,
+                                  height: 40,
+                                  bgcolor: 'divider',
+                                  mt: 1,
+                                }}
+                              />
+                            )}
+                          </Box>
+                          
+                          {/* Content */}
+                          <Box sx={{ flex: 1 }}>
+                            <Paper 
+                              variant="outlined" 
+                              sx={{ 
+                                p: 2, 
+                                bgcolor: entry.action === 'REJECTED' ? 'error.50' : 
+                                         entry.action === 'APPROVED' ? 'success.50' : 
+                                         'background.paper'
+                              }}
+                            >
+                              <Typography variant="subtitle1" component="h6" gutterBottom>
+                                {getAuditActionDescription(entry)}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                                {formatAuditDate(entry.timestamp)}
+                              </Typography>
+                              
+                              {entry.rejectionReason && (
+                                <Box sx={{ mt: 1, p: 1, bgcolor: 'error.100', borderRadius: 1 }}>
+                                  <Typography variant="body2" color="error.main">
+                                    <strong>Rejection Reason:</strong> {entry.rejectionReason}
+                                  </Typography>
+                                </Box>
+                              )}
+                              
+                              {entry.previousStatus && (
+                                <Typography variant="caption" color="text.secondary">
+                                  Status changed from <strong>{entry.previousStatus}</strong> to <strong>{entry.newStatus}</strong>
+                                </Typography>
+                              )}
+                            </Paper>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <History sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="body1" color="text.secondary">
+                        No history available for this submission yet.
+                      </Typography>
+                    </Box>
+                  )}
+                </AccordionDetails>
+              </Accordion>
             </CardContent>
           </Card>
         </Grid>

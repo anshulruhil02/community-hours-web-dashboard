@@ -1,6 +1,6 @@
 // src/services/userService.ts
-import { DatabaseUser, Submission } from '../types/User';
-import  axiosInstance  from '../api/axiosInstance'; 
+import { DatabaseUser, Submission, AuditTrailEntry, RecentActivityEntry, AuditStatistics, } from '../types/User';
+import axiosInstance from '../api/axiosInstance';
 export const userService = {
   // Use axiosInstance directly
   async getAllUsers(): Promise<DatabaseUser[]> {
@@ -38,6 +38,38 @@ export const userService = {
 
   async bulkRejectSubmissions(ids: string[], reason?: string): Promise<any[]> {
     const response = await axiosInstance.patch<any[]>(`/submissions/bulk/reject`, { submissionIds: ids, reason });
+    return response.data;
+  },
+
+  async getSubmissionAuditTrail(submissionId: string): Promise<AuditTrailEntry[]> {
+    const response = await axiosInstance.get<AuditTrailEntry[]>(`/submissions/${submissionId}/audit-trail`);
+    console.log("getSubmissionAuditTrail response:", response.data);
+    return response.data;
+  },
+
+  /**
+   * Get recent audit activity across all submissions (Admin only)
+   */
+  async getRecentAuditActivity(limit: number = 25): Promise<RecentActivityEntry[]> {
+    const response = await axiosInstance.get<RecentActivityEntry[]>(`/submissions/audit/recent-activity?limit=${limit}`);
+    return response.data;
+  },
+
+  /**
+   * Get audit statistics for a date range (Admin only)
+   */
+  async getAuditStatistics(startDate?: string, endDate?: string): Promise<AuditStatistics> {
+    let url = '/submissions/audit/statistics';
+    const params = new URLSearchParams();
+
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    const response = await axiosInstance.get<AuditStatistics>(url);
     return response.data;
   },
 };
